@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>习思想题库复习系统</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#c41e3a">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<style>
+:root {
+  --bg: #f5f5f5; --card: #fff; --text: #333; --sub: #666;
+  --border: #e0e0e0; --accent: #c41e3a; --accent2: #1a6fb5;
+  --correct: #2e7d32; --wrong: #c62828; --tag-bg: #fff0f0;
+  --tag-text: #c41e3a; --hover: #fafafa; --shadow: 0 2px 8px rgba(0,0,0,.1);
+  --btn-bg: #c41e3a; --btn-text: #fff;
+}
+.dark {
+  --bg: #1a1a2e; --card: #252540; --text: #e0e0e0; --sub: #aaa;
+  --border: #3a3a5c; --accent: #ff4d5a; --accent2: #4da6ff;
+  --correct: #4caf50; --wrong: #ff5252; --tag-bg: #3a1520;
+  --tag-text: #ff4d5a; --hover: #2a2a44; --shadow: 0 2px 8px rgba(0,0,0,.4);
+  --btn-bg: #ff4d5a; --btn-text: #fff;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+header { background: var(--accent); color: #fff; padding: 16px 24px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+header h1 { font-size: 1.3em; }
+header .btns { display: flex; gap: 8px; flex-wrap: wrap; }
+header button { padding: 6px 16px; border: 1px solid rgba(255,255,255,.5); border-radius: 6px; background: transparent; color: #fff; cursor: pointer; font-size: .9em; }
+header button:hover { background: rgba(255,255,255,.15); }
+header button.active { background: rgba(255,255,255,.3); font-weight: bold; }
+.container { max-width: 960px; margin: 0 auto; padding: 20px; }
+.card { background: var(--card); border-radius: 12px; box-shadow: var(--shadow); padding: 24px; margin-bottom: 20px; }
+.stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-bottom: 20px; }
+.stat-card { background: var(--card); border-radius: 12px; box-shadow: var(--shadow); padding: 16px; text-align: center; }
+.stat-card .num { font-size: 2em; font-weight: bold; color: var(--accent); }
+.stat-card .label { font-size: .85em; color: var(--sub); margin-top: 4px; }
+select, .filter-btn { padding: 8px 14px; border: 1px solid var(--border); border-radius: 8px; background: var(--card); color: var(--text); font-size: .9em; cursor: pointer; }
+.filter-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 16px; }
+.question-item { padding: 16px; border-bottom: 1px solid var(--border); cursor: pointer; transition: background .15s; }
+.question-item:hover { background: var(--hover); }
+.question-item .meta { display: flex; gap: 8px; align-items: center; margin-bottom: 6px; flex-wrap: wrap; }
+.tag { padding: 2px 10px; border-radius: 12px; font-size: .75em; background: var(--tag-bg); color: var(--tag-text); }
+.tag.single { background: #e8f5e9; color: #2e7d32; }
+.tag.multiple { background: #e3f2fd; color: #1565c0; }
+.tag.truefalse { background: #fce4ec; color: #c62828; }
+.tag.essay, .tag.short_answer { background: #fff3e0; color: #e65100; }
+.question-text { font-size: .95em; line-height: 1.7; }
+.answer-toggle { margin-top: 8px; font-size: .85em; color: var(--accent); cursor: pointer; }
+.answer-content { display: none; margin-top: 8px; padding: 12px; background: var(--hover); border-radius: 8px; font-size: .9em; line-height: 1.7; white-space: pre-wrap; }
+.answer-content.show { display: block; }
+/* Practice mode */
+.practice-card .q-num { font-size: .85em; color: var(--sub); margin-bottom: 8px; }
+.practice-card .q-text { font-size: 1.05em; line-height: 1.8; margin-bottom: 20px; }
+.option-item { display: block; padding: 12px 16px; margin: 6px 0; border: 2px solid var(--border); border-radius: 8px; cursor: pointer; transition: .15s; }
+.option-item:hover { border-color: var(--accent2); }
+.option-item.selected { border-color: var(--accent2); background: rgba(26,111,181,.08); }
+.option-item.correct { border-color: var(--correct); background: rgba(46,125,50,.1); }
+.option-item.wrong { border-color: var(--wrong); background: rgba(198,40,40,.08); }
+.option-label { font-weight: bold; margin-right: 8px; }
+.btn-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 16px; }
+.btn { padding: 10px 24px; border: none; border-radius: 8px; cursor: pointer; font-size: .95em; font-weight: 500; }
+.btn-primary { background: var(--btn-bg); color: var(--btn-text); }
+.btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text); }
+.btn-outline:hover { background: var(--hover); }
+.btn-success { background: var(--correct); color: #fff; }
+.feedback { padding: 12px; border-radius: 8px; margin-top: 12px; font-weight: 500; }
+.feedback.correct { background: rgba(46,125,50,.1); color: var(--correct); }
+.feedback.wrong { background: rgba(198,40,40,.08); color: var(--wrong); }
+.progress-bar { height: 6px; background: var(--border); border-radius: 3px; margin: 16px 0; overflow: hidden; }
+.progress-bar .fill { height: 100%; background: var(--accent); border-radius: 3px; transition: width .3s; }
+.score-area { text-align: center; padding: 30px; }
+.score-area .big-num { font-size: 3em; font-weight: bold; color: var(--accent); }
+/* Chapter view */
+.chapter-section { margin-bottom: 16px; }
+.chapter-section .sec-title { font-size: 1em; font-weight: bold; margin-bottom: 8px; cursor: pointer; color: var(--accent2); }
+.chapter-section .sec-content { display: none; padding: 12px; background: var(--hover); border-radius: 8px; font-size: .9em; line-height: 1.8; white-space: pre-wrap; }
+.chapter-section .sec-content.show { display: block; }
+/* Timer */
+.timer { font-size: 1.2em; font-weight: bold; font-variant-numeric: tabular-nums; }
+/* Mobile */
+@media (max-width: 600px) {
+  .container { padding: 10px; }
+  .card { padding: 16px; }
+  header { padding: 10px 14px; }
+  header h1 { font-size: 1.1em; }
+  header button { padding: 10px 14px; }
+  .option-item { padding: 14px 16px; }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>习思想题库复习系统</h1>
+  <div class="btns">
+    <button id="nav-browse" class="active" onclick="switchView('browse')">浏览模式</button>
+    <button id="nav-practice" onclick="switchView('practice')">刷题模式</button>
+    <button id="nav-exam" onclick="switchView('exam')">模拟考试</button>
+    <button onclick="toggleDark()" title="切换暗色模式">🌓</button>
+  </div>
+</header>
+
+<div class="container" id="app"></div>
+
+<script>
+// ============ DATA LOADING ============
+let DATA = { questions: [], chapters: [] };
+let currentView = 'browse';
+let history = JSON.parse(localStorage.getItem('xixiang_history') || '{}');
+
+async function loadData() {
+  try {
+    const resp = await fetch('questions.json');
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    DATA = await resp.json();
+  } catch(e) {
+    document.getElementById('app').innerHTML = `
+      <div class="card" style="text-align:center;padding:40px">
+        <h3>⚠️ 数据加载失败</h3>
+        <p style="margin:16px 0">未能加载题库数据 questions.json。</p>
+        <p style="color:var(--sub)">请确认 questions.json 与本页面位于同一目录。</p>
+      </div>`;
+  }
+}
+
+// ============ HELPERS ============
+function cleanChapter(name) {
+  const m = name.match(/导论|第[一二三四五六七八九十\d]+章/);
+  return m ? m[0] : name.substring(0, 15);
+}
+function switchView(view) {
+  currentView = view;
+  document.querySelectorAll('header .btns button[id^="nav-"]').forEach(b => b.classList.remove('active'));
+  const btn = document.getElementById('nav-' + view);
+  if (btn) btn.classList.add('active');
+  render();
+}
+
+function toggleDark() {
+  document.documentElement.classList.toggle('dark');
+  localStorage.setItem('xixiang_dark', document.documentElement.classList.contains('dark'));
+}
+
+// ============ RENDER ============
+function render() {
+  const app = document.getElementById('app');
+  app.innerHTML = '';
+  switch(currentView) {
+    case 'browse': renderBrowse(app); break;
+    case 'practice': renderPractice(app); break;
+    case 'exam': renderExam(app); break;
+  }
+}
+
+// ============ STATS ============
+function getStats() {
+  const qs = DATA.questions;
+  return {
+    total: qs.length,
+    single: qs.filter(q => q.type === 'single').length,
+    multiple: qs.filter(q => q.type === 'multiple').length,
+    short: qs.filter(q => q.type === 'short_answer').length,
+    essay: qs.filter(q => q.type === 'essay').length,
+    chapters: [...new Set(qs.map(q => q.chapter))],
+    done: Object.keys(history).length,
+    correct: Object.values(history).filter(v => v === 'correct').length
+  };
+}
+
+// ============ BROWSE MODE ============
+function renderBrowse(app) {
+  const stats = getStats();
+  const chapters = stats.chapters;
+
+  app.innerHTML = `
+    <div class="stats-row">
+      <div class="stat-card"><div class="num">${stats.total}</div><div class="label">总题量</div></div>
+      <div class="stat-card"><div class="num">${stats.done}</div><div class="label">已练习</div></div>
+      <div class="stat-card"><div class="num">${stats.correct}</div><div class="label">已掌握</div></div>
+      <div class="stat-card"><div class="num">${chapters.length}</div><div class="label">章节数</div></div>
+    </div>
+    <div class="card">
+      <div class="filter-row">
+        <select id="filter-chapter" onchange="renderBrowseList()">
+          <option value="all">全部章节</option>
+          ${chapters.map(c => `<option value="${c}">${c}</option>`).join('')}
+        </select>
+        <select id="filter-type" onchange="renderBrowseList()">
+          <option value="all">全部题型</option>
+          <option value="single">单选题</option>
+          <option value="multiple">多选题</option>
+          <option value="truefalse">判断题</option>
+          <option value="short_answer">简答题</option>
+          <option value="essay">论述题</option>
+        </select>
+        <span style="font-size:.85em;color:var(--sub)" id="filter-count"></span>
+      </div>
+      <div id="browse-list"></div>
+    </div>
+  `;
+  renderBrowseList();
+}
+
+function renderBrowseList() {
+  const ch = document.getElementById('filter-chapter').value;
+  const tp = document.getElementById('filter-type').value;
+  let filtered = DATA.questions;
+  if (ch !== 'all') filtered = filtered.filter(q => q.chapter === ch);
+  if (tp !== 'all') filtered = filtered.filter(q => q.type === tp);
+
+  document.getElementById('filter-count').textContent = `共 ${filtered.length} 题`;
+
+  const list = document.getElementById('browse-list');
+  const typeNames = { single: '单选', multiple: '多选', truefalse: '判断', short_answer: '简答', essay: '论述' };
+  const typeClass = { single: 'single', multiple: 'multiple', truefalse: 'essay', short_answer: 'essay', essay: 'essay' };
+
+  list.innerHTML = filtered.map(q => {
+    const doneMark = history['q' + q.id] === 'correct' ? ' ✅' : '';
+    const optsHtml = q.options ? q.options.map(o =>
+      `<span style="margin-right:12px"><b>${o.label}.</b> ${o.text}</span>`
+    ).join('') : '';
+    return `
+    <div class="question-item" onclick="toggleAnswer(this, 'q${q.id}')">
+      <div class="meta">
+        <span class="tag ${typeClass[q.type] || 'single'}">${typeNames[q.type] || q.type}</span>
+        <span class="tag">${cleanChapter(q.chapter)}</span>
+        <span style="font-size:.8em;color:var(--sub)">#${q.number}${doneMark}</span>
+      </div>
+      <div class="question-text">${q.question}</div>
+      ${optsHtml ? `<div style="font-size:.85em;color:var(--sub);margin-top:4px">${optsHtml}</div>` : ''}
+      <div class="answer-toggle" onclick="event.stopPropagation();toggleAnswerEl(this.nextElementSibling)">📖 查看答案</div>
+      <div class="answer-content" id="ans-q${q.id}">
+        ${q.answer ? '<b>答案：</b>' + q.answer : '<b>答案未提供</b>'}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function toggleAnswerEl(el) {
+  el.classList.toggle('show');
+}
+
+// ============ PRACTICE MODE ============
+let practiceState = { questions: [], index: 0, selected: [], answered: false, correctCount: 0 };
+
+function renderPractice(app) {
+  const stats = getStats();
+  const chapters = stats.chapters;
+
+  app.innerHTML = `
+    <div class="card">
+      <h3>刷题模式</h3>
+      <p style="color:var(--sub);margin:8px 0">选择章节和题型，随机出题。作答后即时显示对错。</p>
+      <div class="filter-row">
+        <select id="prac-chapter">
+          <option value="all">全部章节</option>
+          ${chapters.map(c => `<option value="${c}">${c}</option>`).join('')}
+        </select>
+        <select id="prac-type">
+          <option value="all">全部题型</option>
+          <option value="single">仅单选题</option>
+          <option value="multiple">仅多选题</option>
+          <option value="truefalse">仅判断题</option>
+          <option value="choice">选择题（单选+多选+判断）</option>
+        </select>
+        <select id="prac-count">
+          <option value="10">10题</option>
+          <option value="20">20题</option>
+          <option value="30">30题</option>
+          <option value="50">50题</option>
+          <option value="all">全部</option>
+        </select>
+        <button class="btn btn-primary" onclick="startPractice()">开始刷题</button>
+      </div>
+    </div>
+    <div id="prac-area"></div>
+  `;
+}
+
+function startPractice() {
+  const ch = document.getElementById('prac-chapter').value;
+  const tp = document.getElementById('prac-type').value;
+  const count = document.getElementById('prac-count').value;
+
+  let pool = [...DATA.questions];
+  if (ch !== 'all') pool = pool.filter(q => q.chapter === ch);
+  if (tp === 'single') pool = pool.filter(q => q.type === 'single');
+  else if (tp === 'multiple') pool = pool.filter(q => q.type === 'multiple');
+  else if (tp === 'truefalse') pool = pool.filter(q => q.type === 'truefalse');
+  else if (tp === 'choice') pool = pool.filter(q => q.type === 'single' || q.type === 'multiple' || q.type === 'truefalse');
+
+  // Shuffle
+  for (let i = pool.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [pool[i], pool[j]] = [pool[j], pool[i]];
+  }
+
+  const n = count === 'all' ? pool.length : Math.min(parseInt(count), pool.length);
+  practiceState = { questions: pool.slice(0, n), index: 0, selected: [], answered: false, correctCount: 0 };
+  renderPracticeQuestion();
+}
+
+function renderPracticeQuestion() {
+  const st = practiceState;
+  const area = document.getElementById('prac-area');
+  if (st.index >= st.questions.length) {
+    const pct = st.questions.length > 0 ? Math.round(st.correctCount / st.questions.length * 100) : 0;
+    area.innerHTML = `
+      <div class="card score-area">
+        <div class="big-num">${st.correctCount}/${st.questions.length}</div>
+        <p style="font-size:1.1em;margin:10px 0">正确率 ${pct}%</p>
+        <p style="color:var(--sub)">${pct >= 80 ? '🎉 很棒！' : pct >= 60 ? '👍 继续加油！' : '💪 需要多练练！'}</p>
+        <div class="btn-row" style="justify-content:center;margin-top:20px">
+          <button class="btn btn-primary" onclick="switchView('practice')">再来一轮</button>
+          <button class="btn btn-outline" onclick="switchView('browse')">回浏览模式</button>
+        </div>
+      </div>
+    `;
+    return;
+  }
+
+  const q = st.questions[st.index];
+  const isChoice = q.type === 'single' || q.type === 'multiple' || q.type === 'truefalse';
+  const typeNames = { single: '单选题', multiple: '多选题', truefalse: '判断题', short_answer: '简答题', essay: '论述题' };
+
+  let inner = `
+    <div class="card practice-card">
+      <div class="q-num">第 ${st.index + 1}/${st.questions.length} 题 &nbsp;|&nbsp; ${typeNames[q.type]} &nbsp;|&nbsp; ${cleanChapter(q.chapter)}</div>
+      <div class="progress-bar"><div class="fill" style="width:${(st.index/st.questions.length*100)}%"></div></div>
+      <div class="q-text"><b>${q.number}.</b> ${q.question}</div>`;
+
+  if (isChoice && q.options && q.options.length > 0) {
+    const isMulti = q.type === 'multiple';
+    const isTF = q.type === 'truefalse';
+    let hint = '';
+    if (isMulti) hint = '<span style="color:var(--accent);font-size:.85em">（多选题，可多选）</span>';
+    else if (isTF) hint = '<span style="color:var(--sub);font-size:.85em">（判断题）</span>';
+    else hint = '<span style="color:var(--sub);font-size:.85em">（单选题）</span>';
+    inner += `<div style="margin-top:12px">${hint}</div>`;
+    q.options.forEach(o => {
+      const selClass = st.answered ?
+        (q.answer.includes(o.label) ? 'correct' : (st.selected.includes(o.label) && !q.answer.includes(o.label) ? 'wrong' : '')) :
+        (st.selected.includes(o.label) ? 'selected' : '');
+      const clickHandler = st.answered ? '' : `onclick="selectOption('${o.label}', ${isMulti})"`;
+      inner += `<div class="option-item ${selClass}" ${clickHandler}>
+        <span class="option-label">${o.label}.</span> ${o.text}
+      </div>`;
+    });
+  } else {
+    inner += `<div style="margin-top:12px;color:var(--sub)">简答/论述题 — 请自行思考后查看答案</div>`;
+  }
+
+  if (st.answered) {
+    const isCorrect = st.selected.sort().join('') === q.answer.split('').sort().join('');
+    const correctClass = isCorrect ? 'correct' : 'wrong';
+    const correctText = isCorrect ? '✅ 回答正确！' : `❌ 回答错误，正确答案是：${q.answer}`;
+    inner += `<div class="feedback ${correctClass}">${correctText}</div>`;
+    if (q.answer && q.answer.length > 20 && !isChoice) {
+      inner += `<div style="margin-top:12px;padding:12px;background:var(--hover);border-radius:8px;line-height:1.8;font-size:.9em"><b>参考答案：</b><br>${q.answer.replace(/\n/g,'<br>')}</div>`;
+    }
+  }
+
+  inner += `<div class="btn-row">`;
+  if (!st.answered) {
+    if (isChoice) inner += `<button class="btn btn-primary" onclick="submitAnswer()">提交答案</button>`;
+    inner += `<button class="btn btn-success" onclick="showAnswer()">直接看答案</button>`;
+  } else {
+    inner += `<button class="btn btn-primary" onclick="nextQuestion()">${st.index + 1 >= st.questions.length ? '查看成绩' : '下一题 ▶'}</button>`;
+  }
+  inner += `<button class="btn btn-outline" onclick="switchView('browse')">退出</button></div></div>`;
+
+  area.innerHTML = inner;
+}
+
+function selectOption(label, isMulti) {
+  const st = practiceState;
+  if (!isMulti) st.selected = [label];
+  else {
+    if (st.selected.includes(label)) st.selected = st.selected.filter(l => l !== label);
+    else st.selected.push(label);
+  }
+  renderPracticeQuestion();
+}
+
+function submitAnswer() {
+  const st = practiceState;
+  st.answered = true;
+  const q = st.questions[st.index];
+  const isCorrect = st.selected.sort().join('') === q.answer.split('').sort().join('');
+  if (isCorrect) st.correctCount++;
+  history['q' + q.id] = isCorrect ? 'correct' : 'wrong';
+  localStorage.setItem('xixiang_history', JSON.stringify(history));
+  renderPracticeQuestion();
+}
+
+function showAnswer() {
+  const st = practiceState;
+  st.answered = true;
+  const q = st.questions[st.index];
+  history['q' + q.id] = 'seen';
+  localStorage.setItem('xixiang_history', JSON.stringify(history));
+  renderPracticeQuestion();
+}
+
+function nextQuestion() {
+  practiceState.index++;
+  practiceState.selected = [];
+  practiceState.answered = false;
+  renderPracticeQuestion();
+}
+
+// ============ EXAM MODE ============
+let examState = { questions: [], index: 0, selected: [], answers: [], startTime: 0, timerInterval: null };
+
+function renderExam(app) {
+  if (examState.timerInterval) { clearInterval(examState.timerInterval); examState.timerInterval = null; }
+  const chapters = getStats().chapters;
+
+  app.innerHTML = `
+    <div class="card">
+      <h3>模拟考试模式</h3>
+      <p style="color:var(--sub);margin:8px 0">从题库随机抽取题目组成试卷，限时作答，模拟真实考试场景。</p>
+      <div class="filter-row">
+        <select id="exam-chapter">
+          <option value="all">全部章节</option>
+          ${chapters.map(c => `<option value="${c}">${c}</option>`).join('')}
+        </select>
+        <select id="exam-count">
+          <option value="20">20题（标准）</option>
+          <option value="30">30题</option>
+          <option value="50">50题</option>
+        </select>
+        <select id="exam-time">
+          <option value="30">30分钟</option>
+          <option value="45">45分钟</option>
+          <option value="60">60分钟</option>
+        </select>
+        <button class="btn btn-primary" onclick="startExam()">开始考试</button>
+      </div>
+    </div>
+    <div id="exam-area"></div>
+  `;
+}
+
+function startExam() {
+  const ch = document.getElementById('exam-chapter').value;
+  const count = parseInt(document.getElementById('exam-count').value);
+  const totalTime = parseInt(document.getElementById('exam-time').value) * 60;
+
+  let pool = [...DATA.questions].filter(q => q.type === 'single' || q.type === 'multiple' || q.type === 'truefalse');
+  if (ch !== 'all') pool = pool.filter(q => q.chapter === ch);
+
+  for (let i = pool.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [pool[i], pool[j]] = [pool[j], pool[i]];
+  }
+
+  examState = {
+    questions: pool.slice(0, Math.min(count, pool.length)),
+    index: 0, selected: [], answers: new Array(Math.min(count, pool.length)).fill(''),
+    startTime: Date.now(), timeLeft: totalTime, timerInterval: null
+  };
+  startTimer();
+  renderExamQuestion();
+}
+
+function startTimer() {
+  const update = () => {
+    examState.timeLeft--;
+    const el = document.getElementById('exam-timer');
+    if (el) {
+      const m = Math.floor(examState.timeLeft / 60);
+      const s = examState.timeLeft % 60;
+      el.textContent = `${m}:${s.toString().padStart(2, '0')}`;
+      el.style.color = examState.timeLeft < 300 ? 'var(--wrong)' : '';
+    }
+    if (examState.timeLeft <= 0) { submitExam(true); }
+  };
+  examState.timerInterval = setInterval(update, 1000);
+}
+
+function renderExamQuestion() {
+  const st = examState;
+  const area = document.getElementById('exam-area');
+  if (!area) return;
+
+  if (st.index >= st.questions.length) { submitExam(false); return; }
+
+  const q = st.questions[st.index];
+  const isMulti = q.type === 'multiple';
+
+  let inner = `
+    <div class="card practice-card">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+        <div class="q-num">第 ${st.index + 1}/${st.questions.length} 题 &nbsp;|&nbsp; ${q.type==='multiple'?'多选题':q.type==='truefalse'?'判断题':'单选题'} &nbsp;|&nbsp; ${cleanChapter(q.chapter)}</div>
+        <div class="timer" id="exam-timer">⏱</div>
+      </div>
+      <div class="progress-bar"><div class="fill" style="width:${(st.index/st.questions.length*100)}%"></div></div>
+      <div class="q-text"><b>${q.number}.</b> ${q.question}</div>
+      <div style="margin-top:12px">${isMulti ? '<span style="color:var(--accent);font-size:.85em">（多选题）</span>' : ''}</div>`;
+
+  q.options.forEach(o => {
+    const sel = st.answers[st.index].includes(o.label);
+    const clickHandler = `onclick="examSelect('${o.label}', ${isMulti})"`;
+    inner += `<div class="option-item ${sel ? 'selected' : ''}" ${clickHandler}>
+      <span class="option-label">${o.label}.</span> ${o.text}
+    </div>`;
+  });
+
+  inner += `<div class="btn-row">
+    <button class="btn btn-outline" onclick="examPrev()" ${st.index === 0 ? 'disabled' : ''}>上一题</button>
+    <button class="btn btn-primary" onclick="examNext()">${st.index + 1 >= st.questions.length ? '交卷' : '下一题 ▶'}</button>
+    <button class="btn btn-outline" onclick="if(confirm('确定要交卷吗？')) submitExam(false)">交卷</button>
+  </div></div>`;
+
+  area.innerHTML = inner;
+}
+
+function examSelect(label, isMulti) {
+  const st = examState;
+  let cur = st.answers[st.index] || '';
+  if (!isMulti) {
+    cur = cur === label ? '' : label;
+  } else {
+    cur = cur.includes(label) ? cur.replace(label, '') : cur + label;
+  }
+  st.answers[st.index] = cur.split('').sort().join('');
+  renderExamQuestion();
+}
+
+function examPrev() {
+  if (examState.index > 0) { examState.index--; renderExamQuestion(); }
+}
+
+function examNext() {
+  if (examState.index + 1 >= examState.questions.length) {
+    if (confirm('这是最后一题，确定交卷吗？')) submitExam(false);
+  } else {
+    examState.index++;
+    renderExamQuestion();
+  }
+}
+
+function submitExam(timeUp) {
+  if (examState.timerInterval) { clearInterval(examState.timerInterval); examState.timerInterval = null; }
+  const st = examState;
+  let correct = 0;
+  let wrong = 0;
+  const details = [];
+
+  st.questions.forEach((q, i) => {
+    const userAns = (st.answers[i] || '').split('').sort().join('');
+    const realAns = (q.answer || '').split('').sort().join('');
+    const isCorrect = userAns === realAns && userAns !== '';
+    if (isCorrect) correct++; else wrong++;
+    if (isCorrect) history['q' + q.id] = 'correct';
+    details.push({ q, userAns, realAns, isCorrect });
+  });
+
+  localStorage.setItem('xixiang_history', JSON.stringify(history));
+
+  const elapsed = Math.round((Date.now() - st.startTime) / 1000);
+  const m = Math.floor(elapsed / 60);
+  const s = elapsed % 60;
+  const pct = st.questions.length > 0 ? Math.round(correct / st.questions.length * 100) : 0;
+
+  const area = document.getElementById('exam-area');
+  area.innerHTML = `
+    <div class="card score-area">
+      <div class="big-num">${correct}/${st.questions.length}</div>
+      <p style="font-size:1.1em;margin:10px 0">${timeUp ? '⏰ 时间到！' : ''} 正确率 ${pct}%</p>
+      <p style="color:var(--sub)">用时 ${m}分${s}秒 &nbsp;|&nbsp; 正确 ${correct} 题 &nbsp;|&nbsp; 错误 ${wrong} 题</p>
+      <div class="btn-row" style="justify-content:center;margin-top:20px">
+        <button class="btn btn-primary" onclick="switchView('exam')">重新考试</button>
+        <button class="btn btn-outline" onclick="switchView('browse')">回浏览模式</button>
+      </div>
+    </div>
+    <div class="card">
+      <h4>答题详情</h4>
+      ${details.map((d, i) => `
+        <div style="padding:8px 0;border-bottom:1px solid var(--border)">
+          <span style="color:${d.isCorrect ? 'var(--correct)' : 'var(--wrong)'};font-weight:bold">
+            ${d.isCorrect ? '✅' : '❌'} ${i+1}.
+          </span>
+          ${d.q.question.substring(0, 60)}...
+          ${!d.isCorrect ? `<span style="color:var(--sub)">（你的: ${d.userAns || '未答'}，正确: ${d.realAns}）</span>` : ''}
+        </div>
+      `).join('')}
+    </div>
+  `;
+}
+
+// ============ INIT ============
+async function init() {
+  if (localStorage.getItem('xixiang_dark') === 'true') {
+    document.documentElement.classList.add('dark');
+  }
+  await loadData();
+  render();
+}
+
+init();
+</script>
+</body>
+</html>
